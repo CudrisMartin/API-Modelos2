@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from flask_marshmallow import Marshmallow
 
@@ -19,8 +19,7 @@ class Videojuego(db.Model):
     nombre = db.Column(db.String(255))
     puntaje = db.Column(db.Integer)
 
-    def __init_(self, id, nombre, puntaje):
-        self.id = id
+    def __init__(self, nombre, puntaje):
         self.nombre = nombre
         self.puntaje = puntaje
 
@@ -29,20 +28,40 @@ db.create_all()
 #Esquema Videojuegos
 class VideojuegoSchema(ma.Schema):
     class Meta:
-        fields = ('nombre','puntaje')
+        fields = ('id','nombre','puntaje')
 
 #Unica respuesta
 videojuego_schema = VideojuegoSchema()
 
 #Multiple respuestas
-videojuego_schema = VideojuegoSchema(many=True)
+videojuegos_schema = VideojuegoSchema(many=True)
 
 #GET
 @app.route('/puntajes', methods = ['GET'])
 def get_puntajes():
     todos_puntajes = Videojuego.query.all()
-    result = videojuego_schema.dump(todos_puntajes)
+    result = videojuegos_schema.dump(todos_puntajes)
     return jsonify(result)
+
+#GET elemento segun id
+@app.route('/puntajes/<id>', methods = ['GET'])
+def get_puntaje_id(id):
+    puntaje = Videojuego.query.get(int(id))
+    return videojuego_schema.jsonify(puntaje)
+
+#POST
+@app.route('/puntajes', methods = ['POST'])
+def ingresar_puntaje():
+    data = request.get_json(force = True)
+    nombre = data['nombre']
+    puntaje = data['puntaje']
+
+    nuevo_puntaje = Videojuego(nombre, puntaje)
+
+    db.session.add(nuevo_puntaje)
+    db.session.commit()
+    
+    return videojuego_schema.jsonify(nuevo_puntaje) 
 
 #Mensaje Bienvenida
 @app.route('/', methods = ['GET'])
